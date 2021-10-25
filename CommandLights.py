@@ -1,7 +1,6 @@
 import lifxlan as lx
 import phue
 import time
-import sys
 import re
 
 from threading import Thread
@@ -18,7 +17,7 @@ from threading import Thread
 # IMPORTANT: In order to use the functions developed    #
 #            above and below the proper smart lights    #
 #            must be available and setup. Currently     #
-#            support LifX and Philips Hue smart lights. #
+#            supports LifX and Philips Hue smart lights.#
 #                                                       #
 # USAGE: The global variables below can be updated and  #
 #        customized to ones liking. The program will    #
@@ -88,15 +87,15 @@ LX_COMMANDS = {
 #                          PHILIPS HUE SETTINGS                         #
 #########################################################################
 
-PHUE_DEFAULT_COLOR = {"night light": [0.4, 0.35], "bath light": [0.4, 0.35]}
+PHUE_DEFAULT_COLOR = {"table light": [0.4, 0.35], "bath light": [0.4, 0.35]}
 PHUE_DEFAULT_BRIGHTNESS = 254  # Default color for LifX bulbs
 
 PHUE_MAX_BRIGHTNESS = 254  # Adjust these values to how bright a light should get (divide by 2.54 to get percentage)
 PHUE_MIN_BRIGHTNESS = 5  # Adjust this to how dim a light should get
 
 PHUE_BRIDGE_IPADD = "xxx.xxx.x.xxx"  # IP address of the bridge
-PHUE_LIGHT_NAMES = ["night light", "bath light"]
-PHUE_LIGHT_IDS = {"night light": 1, "bath light": 2}  # ID's for each lights
+PHUE_LIGHT_NAMES = ["table light", "bath light"]
+PHUE_LIGHT_IDS = {"table light": 1, "bath light": 2}  # ID's for each lights
 
 PHUE_COLORS = {"red": [1, 0], "orange": [0.55, 0.4], "yellow": [0.45, 0.47],
                "green": [0, 1], "cyan": [0.196, 0.252], "blue": [0, 0],
@@ -159,12 +158,13 @@ class LightAPI:
 
         if len(requested_lights) == 0:  # If not light specified, default to all lights
             requested_lights = self.light_objects
-        for obj in requested_lights:
-            obj.process_command(words)
 
-    def reset_lights(self):
-        for obj in self.light_objects:
-            obj.reset_lights()
+        responses = []
+        for obj in requested_lights:
+            response = obj.process_command(words)
+            responses.append(response)
+
+        return responses
 
 
 class LifX:
@@ -184,7 +184,7 @@ class LifX:
             if name in words:
                 light_name = name
                 break
-        # print(words)
+        
         # If no light name was specified, default to all lights
         if light_name:
             lx_names = [light_name]
@@ -209,7 +209,7 @@ class LifX:
                                 if specs[0]:
                                     self.threadVars[specs[1]] = True
                                     self.lightThreads[name] = Thread(target=getattr(self, specs[1]),
-                                                                     args=(args, LX_COMMANDS[cmd]))
+                                                                     args=(args, LX_COMMANDS[cmd]), daemon=True)
                                     self.lightThreads[name].start()
                                 else:
                                     self.threadVars[specs[1]] = False
@@ -249,22 +249,10 @@ class LifX:
     def run_thread(self, args, elements):
         while self.threadVars[elements[args[1]][1]]:
             for key, val in elements[args[1]][3].items():
-                # self.execute_command(args + [val])
                 self.execute_command(args + [[val] + [elements[args[1]][4]]])
                 time.sleep(elements[args[1]][2])
                 if not self.threadVars[elements[args[1]][1]]:
                     break
-
-    # Use this when exiting the program
-    def reset_lights(self):
-        # Make sure all loops are ended
-        for key, val in self.threadVars.items():
-            self.threadVars[key] = False
-        # End all existing threads
-        for key in self.threadVars.keys():
-            if self.threadVars[key] != '' and self.threadVars[key]:
-                self.threadVars[key].join()
-        sys.exit(0)
 
     @staticmethod
     def get_light_names():
@@ -286,7 +274,7 @@ class PhilipsHue:
                 self.bridge.set_light(lid, "on", False)
             else:
                 self.bridge.set_light(lid, "xy", PHUE_DEFAULT_COLOR[name])
-                self.bridge.set_light(lid, "bri", PHUE_DEFAULT_BRIGHTNESS[name])
+                self.bridge.set_light(lid, "bri", PHUE_DEFAULT_BRIGHTNESS)
 
     def process_command(self, words):
         args = []
@@ -296,10 +284,9 @@ class PhilipsHue:
                 light_id = PHUE_LIGHT_IDS[name]
                 break
 
-        # If no light name was specified, default to all lights
         if light_id:
             ids = [light_id]
-        else:
+        else:   # If no light name was specified, default to all lights
             ids = list(PHUE_LIGHT_IDS.values())
 
         args.append(ids)
@@ -319,7 +306,7 @@ class PhilipsHue:
                             if PHUE_KEYWORDS[cmd][0]:
                                 self.threadVars[PHUE_KEYWORDS[cmd][1]] = True
                                 self.lightThreads[lid] = Thread(target=getattr(self, PHUE_KEYWORDS[cmd][1]),
-                                                                args=(args, PHUE_KEYWORDS[cmd]))
+                                                                args=(args, PHUE_KEYWORDS[cmd]), daemon=True)
                                 self.lightThreads[lid].start()
                             else:
                                 self.threadVars[PHUE_KEYWORDS[cmd][1]] = False
@@ -337,10 +324,10 @@ class PhilipsHue:
 
             return "Voice command '" + str(words) + "' does not exist."
         except Exception as Ex:
-            return "Error: " + str(Ex)
+            return "PHUE ERROR: " + str(Ex)
 
     def execute_command(self, args):
-        self.bridge.set_light(*args)
+        return self.bridge.set_light(*args)
 
     def colorama(self, args, elements):
         self.run_thread(args, elements)
@@ -357,21 +344,15 @@ class PhilipsHue:
     def run_thread(self, args, elements):
         while self.threadVars[elements[1]]:
             for key, val in elements[3].items():
-                self.execute_command(args + [val])
+                result = self.execute_command(args + [val])
+                for i, light in enumerate(args[0]):  # Unique for phue, check statuses to make sure error is captured
+                    result_status = list(result[i][0].keys())[0]
+                    if result_status == "error":  # Exit thread for the light(s) that are non-responsive to requests
+                        print(f"Light {i+1} error: " + str(result[i][0][result_status]["description"]))
+                        return
                 time.sleep(elements[2])
                 if not self.threadVars[elements[1]]:
                     break
-
-    # Use this when exiting the program
-    def reset_lights(self):
-        # Make sure all loops are ended
-        for key, val in self.threadVars.items():
-            self.threadVars[key] = False
-        # End all existing threads
-        for key in self.threadVars.keys():
-            if self.threadVars[key] != '' and self.threadVars[key]:
-                self.threadVars[key].join()
-        sys.exit(0)
 
     @staticmethod
     def get_light_names():
