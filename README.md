@@ -11,6 +11,8 @@ You may choose to run the main script in the background and go on through the da
 * Raise (light name or all "lights) (to # percent)
 * Change color (of light name or "lights") to \[RED,ORANGE,YELLOW,GREEN,CYAN,BLUE,PURPLE,PINK,WHITE,GOLD]
 
+To stop the program from running, speak "exit voice" and the program will end.
+
 # Setup and Configuration
 The application can be configured and used in 3 steps.<br>
 
