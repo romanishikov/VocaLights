@@ -80,47 +80,34 @@ class Lights(object):
                     b) bridge (PhilipsHue)
                     At minimum an IP address is required to set up the current brands (lifx also requires mac address).
         * Subtype String. Must be either a list/tuple or single string (e.g. '198.221.1.111')
-
     - light_names: The name(s) of the light(s) the user will refer to (e.g. 'bathroom light').
         * Subtype String .Must be either a list/tuple or single string (comma separation is not registered)
-
     - light_ids: Unique to PhilipsHue. This refers to the ID number of the light when it was setup (e.g. 1, 2, 3, etc.)
         * Subtype Integer. Must be a small integer or a list/tuple of small integer(s)
-
     - mac_addresses: Unique to LifX. To connect to a light bulb both mac address and ip address must be specified.
         * Subtype String. Must be either a list/tuple or single string (e.g. 'D0:12:34:56:78:90')
-
     - default_color: Specifies the color of the light when the program is first run.
                      Colors available are: red, orange, yellow, blue, green, cyan, purple, pink, white, and gold.
                      This parameter is not case sensitive as all values are converted to lowercase upon config.
         * Subtype String. Must be either a list/tuple or single string (one value default all lights to that color)
-
     - default_brightness: Specifies how bright a light will be on runtime.
                           Lifx uses a different range than PhilipsHue. Max brightness for LifX is 65535
                           while max brightness for PhilipsHue is 254. 0 is the lowest for both.
         * Subtype Integer. Must be either a list/tuple or single integer
-
     - max_brightness: Specifies the upper brightness range when executing commands such as 'raise lights' or 'flash'.
         * Subtype Integer. Must be either a list/tuple or single integer
-
     - min_brightness: Specified the lower brightness range when executing commands such as 'dim lights' or 'flash'
         * Subtype Integer. Must be either a list/tuple or single integer
-
     - brightness_rate: Unique for LifX. Specifies how fast a light is raised or dim (in ms).
         * Subtype Integer. Must be either a list/tuple or single integer
-
     - color_rate: Unique for LifX. Specifies how fast a light's color will change (in ms).
         * Subtype Integer. Must be either a list/tuple or single integer
-
     - flash_rate: Specifies the speed that the light(s) will flash in and out (in s, specific to the flash command)
         * Subtype Integer. Must be either a list/tuple or single integer
-
     - colorama_rate: Specifies the speed that the light(s) smoothly transition into new colors (in s).
         * Subtype Integer. Must be either a list/tuple or single integer
-
     - disco_rate: Similar to colorama except without smooth transition and at a faster rate (in s).
         * Subtype Integer. Must be either a list/tuple or single integer (decimal)
-
     - flicker_rate: Similar to flash except without smooth transition and at a faster rate (in s).
         * Subtype Integer. Must be either a list/tuple or single integer (decimal)
     """
