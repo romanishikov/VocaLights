@@ -21,7 +21,7 @@ PARAMS = {
 
 DEFAULTS = {
     LIFX_BRAND: {
-        "light_names": "light 1",
+        "light_names": "light x",
         "default_colors": "GOLD",
         "default_brightness": 32500,
         "max_brightness": 65000,
@@ -34,7 +34,7 @@ DEFAULTS = {
         "flicker_rate": 0.03,
         },
     PHUE_BRAND: {
-        "light_names": "light 1",
+        "light_names": "light hue",
         "light_ids": [1],
         "default_colors": "GOLD",
         "default_brightness": 254,
