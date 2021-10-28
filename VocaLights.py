@@ -21,7 +21,7 @@ PARAMS = {
 
 DEFAULTS = {
     LIFX_BRAND: {
-        "light_names": "light x",
+        "light_names": "light 1",
         "default_colors": "GOLD",
         "default_brightness": 32500,
         "max_brightness": 65000,
@@ -34,7 +34,7 @@ DEFAULTS = {
         "flicker_rate": 0.03,
         },
     PHUE_BRAND: {
-        "light_names": "light hue",
+        "light_names": "light 1",
         "light_ids": [1],
         "default_colors": "GOLD",
         "default_brightness": 254,
@@ -64,7 +64,7 @@ SPEECH_RESPONSES = {
     }
 
 
-class Lights(object):
+class Lights:
 
     """
     A configuration class that logs light objects and stores them for later use.
@@ -80,49 +80,49 @@ class Lights(object):
                     b) bridge (PhilipsHue)
                     At minimum an IP address is required to set up the current brands (lifx also requires mac address).
         * Subtype String. Must be either a list/tuple or single string (e.g. '198.221.1.111')
-        
+
     - light_names: The name(s) of the light(s) the user will refer to (e.g. 'bathroom light').
         * Subtype String .Must be either a list/tuple or single string (comma separation is not registered)
-        
+
     - light_ids: Unique to PhilipsHue. This refers to the ID number of the light when it was setup (e.g. 1, 2, 3, etc.)
         * Subtype Integer. Must be a small integer or a list/tuple of small integer(s)
-        
+
     - mac_addresses: Unique to LifX. To connect to a light bulb both mac address and ip address must be specified.
         * Subtype String. Must be either a list/tuple or single string (e.g. 'D0:12:34:56:78:90')
-        
+
     - default_color: Specifies the color of the light when the program is first run.
                      Colors available are: red, orange, yellow, blue, green, cyan, purple, pink, white, and gold.
                      This parameter is not case sensitive as all values are converted to lowercase upon config.
         * Subtype String. Must be either a list/tuple or single string (one value default all lights to that color)
-        
+
     - default_brightness: Specifies how bright a light will be on runtime.
                           Lifx uses a different range than PhilipsHue. Max brightness for LifX is 65535
                           while max brightness for PhilipsHue is 254. 0 is the lowest for both.
         * Subtype Integer. Must be either a list/tuple or single integer
-        
+
     - max_brightness: Specifies the upper brightness range when executing commands such as 'raise lights' or 'flash'.
         * Subtype Integer. Must be either a list/tuple or single integer
-        
+
     - min_brightness: Specified the lower brightness range when executing commands such as 'dim lights' or 'flash'
         * Subtype Integer. Must be either a list/tuple or single integer
-        
+
     - brightness_rate: Unique for LifX. Specifies how fast a light is raised or dim (in ms).
         * Subtype Integer. Must be either a list/tuple or single integer
-        
+
     - color_rate: Unique for LifX. Specifies how fast a light's color will change (in ms).
         * Subtype Integer. Must be either a list/tuple or single integer
-        
+
     - flash_rate: Specifies the speed that the light(s) will flash in and out (in s, specific to the flash command)
         * Subtype Integer. Must be either a list/tuple or single integer
-        
+
     - colorama_rate: Specifies the speed that the light(s) smoothly transition into new colors (in s).
         * Subtype Integer. Must be either a list/tuple or single integer
-        
+
     - disco_rate: Similar to colorama except without smooth transition and at a faster rate (in s).
-        * Subtype Integer. Must be either a list/tuple or single integer (whole number or decimal)
-        
+        * Subtype Integer. Must be either a list/tuple or single integer (decimal)
+
     - flicker_rate: Similar to flash except without smooth transition and at a faster rate (in s).
-        * Subtype Integer. Must be either a list/tuple or single integer (whole number or decimal)
+        * Subtype Integer. Must be either a list/tuple or single integer (decimal)
     """
 
     def __init__(self):
@@ -202,7 +202,7 @@ class Lights(object):
             self.light_names = {}
             self.light_objects = light_objects
             for obj in self.light_objects:
-                self.light_names[obj] = obj.get_light_names()
+                self.light_names[obj] = GlobalOps(obj).get_light_names()
 
         def run_commands(self, words):
             words = words.lower()  # Consistency across commands
@@ -229,7 +229,7 @@ class Lights(object):
                      max_brightness, min_brightness, brightness_rate, color_rate,
                      flash_rate, colorama_rate, disco_rate, flicker_rate):
 
-            self.LX_LIGHT_NAMES = light_names
+            self.LIGHT_NAMES = light_names
 
             # Color values according to lifxlan.Light module specifications
             self.LX_COLORS = {"red": [65535, 65535, 65535, 3500], "orange": [6500, 65535, 65535, 3500],
@@ -267,13 +267,13 @@ class Lights(object):
 
             for i, name in enumerate(light_names):
                 self.lights[name] = lx.Light(mac_addresses[i], ip_addresses[i])  # Set the Light objects
-                self.lights[name].set_color(getattr(lx, default_colors[i]))  # Set the default color
+                self.lights[name].set_color(getattr(lx, default_colors[i].upper()))  # Set the default color
                 self.lights[name].set_brightness(default_brightness[i])  # Set the default brightness
 
         def process_command(self, words):
             args = []
             light_name = None
-            for name in self.LX_LIGHT_NAMES:
+            for name in self.LIGHT_NAMES:
                 if name in words:
                     light_name = name
                     break
@@ -282,7 +282,7 @@ class Lights(object):
             if light_name:
                 lx_names = [light_name]
             else:
-                lx_names = self.LX_LIGHT_NAMES
+                lx_names = self.LIGHT_NAMES
 
             args.append(lx_names)
 
@@ -300,11 +300,13 @@ class Lights(object):
                             elif isinstance(specs, list):  # Specific to continuous functions
                                 for name in lx_names:  # If no light name specified default to all
                                     if specs[0]:
+                                        global_cmd = specs[1]
                                         self.threadVars[specs[1]] = True
-                                        self.lightThreads[name] = Thread(target=getattr(self, specs[1]),
+                                        self.lightThreads[name] = Thread(target=getattr(GlobalOps(self), global_cmd),
                                                                          args=(args, self.LX_COMMANDS[cmd]),
                                                                          daemon=True)
                                         self.lightThreads[name].start()
+
                                     else:
                                         self.threadVars[specs[1]] = False
                             elif "dynaInt" in specs:  # Specific to brightness adjustment
@@ -318,27 +320,15 @@ class Lights(object):
                             if len(args) >= 3:
                                 self.execute_command(args)
 
-                        return {"SUCCESS": {cmd: lx_names}}
+                            return {"SUCCESS": {cmd: lx_names}, "Class": LIFX_BRAND}
 
-                return {"INFO": "Voice command '" + str(words) + "' does not exist."}
+                return {"INFO": "Voice command '" + str(words) + "' does not exist.", "Class": LIFX_BRAND}
             except Exception as Ex:
-                return {"ERROR": str(Ex)}
+                return {"ERROR": str(Ex), "Class": LIFX_BRAND}
 
         def execute_command(self, args):
             for name in args[0]:
                 getattr(self.lights[name], args[1])(*args[2])
-
-        def colorama(self, args, elements):
-            self.run_thread(args, elements)
-
-        def disco(self, args, elements):
-            self.run_thread(args, elements)
-
-        def flash(self, args, elements):
-            self.run_thread(args, elements)
-
-        def flicker(self, args, elements):
-            self.run_thread(args, elements)
 
         def run_thread(self, args, elements):
             while self.threadVars[elements[args[1]][1]]:
@@ -348,15 +338,13 @@ class Lights(object):
                     if not self.threadVars[elements[args[1]][1]]:
                         break
 
-        def get_light_names(self):
-            return self.LX_LIGHT_NAMES
-
     class PhilipsHue:
+
         def __init__(self, ip_addresses, light_names, light_ids, default_colors,
                      default_brightness, max_brightness, min_brightness,
                      flash_rate, colorama_rate, disco_rate, flicker_rate):
 
-            self.PHUE_LIGHT_NAMES = light_names
+            self.LIGHT_NAMES = light_names
             self.PHUE_LIGHT_IDS = {}
 
             self.bridge = phue.Bridge(ip_addresses[0])
@@ -416,7 +404,7 @@ class Lights(object):
         def process_command(self, words):
             args = []
             light_id = None
-            for name in self.PHUE_LIGHT_NAMES:
+            for name in self.LIGHT_NAMES:
                 if name in words:
                     light_id = self.PHUE_LIGHT_IDS[name]
                     break
@@ -428,8 +416,7 @@ class Lights(object):
 
             args.append(ids)
 
-            try:
-                # Go through each command and see if it matches the spoken words
+            try:  # Go through each command and see if it matches the spoken words
                 for cmd, value in self.PHUE_COMMANDS.items():
                     if cmd in words:
                         args.append(value)
@@ -441,8 +428,9 @@ class Lights(object):
                         elif isinstance(self.PHUE_KEYWORDS[cmd], list):  # For looped functions
                             for lid in ids:  # If no light name specified default to all
                                 if self.PHUE_KEYWORDS[cmd][0]:
+                                    global_cmd = self.PHUE_KEYWORDS[cmd][1]  # Get function name in GlobalOps class
                                     self.threadVars[self.PHUE_KEYWORDS[cmd][1]] = True
-                                    self.lightThreads[lid] = Thread(target=getattr(self, self.PHUE_KEYWORDS[cmd][1]),
+                                    self.lightThreads[lid] = Thread(target=getattr(GlobalOps(self), global_cmd),
                                                                     args=(args, self.PHUE_KEYWORDS[cmd]), daemon=True)
                                     self.lightThreads[lid].start()
                                 else:
@@ -456,28 +444,18 @@ class Lights(object):
                             args.append(self.PHUE_KEYWORDS[cmd])  # For main switch
 
                         if len(args) >= 3:
-                            self.execute_command(args)
+                            response = self.execute_command(args)  # PhilipsHue returns error responses
+                            if list(response[0][0])[0] == "error":
+                                raise Exception(response[0][0]["error"]["description"])
 
-                        return {"SUCCESS": {cmd: ids}}
+                        return {"SUCCESS": {cmd: ids}, "Class": PHUE_BRAND}
 
-                return {"INFO": "Voice command '" + str(words) + "' does not exist."}
+                return {"INFO": "Voice command '" + str(words) + "' does not exist.", "Class": PHUE_BRAND}
             except Exception as Ex:
-                return {"ERROR": str(Ex)}
+                return {"ERROR": str(Ex), "Class": PHUE_BRAND}
 
         def execute_command(self, args):
             return self.bridge.set_light(*args)
-
-        def colorama(self, args, elements):
-            self.run_thread(args, elements)
-
-        def disco(self, args, elements):
-            self.run_thread(args, elements)
-
-        def flash(self, args, elements):
-            self.run_thread(args, elements)
-
-        def flicker(self, args, elements):
-            self.run_thread(args, elements)
 
         def run_thread(self, args, elements):
             while self.threadVars[elements[1]]:
@@ -492,8 +470,34 @@ class Lights(object):
                     if not self.threadVars[elements[1]]:
                         break
 
-        def get_light_names(self):
-            return self.PHUE_LIGHT_NAMES
+
+class GlobalOps:
+
+    """
+    These functions are shared across the Lights subclasses (i.e. LifX, PhilipsHue, etc).
+    The functions pass the request back to the object that called it.
+
+    NOTE: The run_thread and execute_command methods vary across the Lights subclasses
+    and are treated uniquely based on how they are controlled by their respective libraries.
+    """
+
+    def __init__(self, LightObj):
+        self.LightObj = LightObj
+
+    def colorama(self, args, elements):
+        self.LightObj.run_thread(args, elements)
+
+    def disco(self, args, elements):
+        self.LightObj.run_thread(args, elements)
+
+    def flash(self, args, elements):
+        self.LightObj.run_thread(args, elements)
+
+    def flicker(self, args, elements):
+        self.LightObj.run_thread(args, elements)
+
+    def get_light_names(self):
+        return self.LightObj.LIGHT_NAMES
 
 
 class Activation(Lights):
@@ -513,7 +517,7 @@ class Activation(Lights):
         self.vIn = VC.CommandInputs(pause_threshold)
         self.vOut = VC.CommandOutputs()
 
-    def run(self, voice_response=False):
+    def run(self, voice_response=False, debug=False):
         if len(self.light_objects) == 0:
             raise Exception("ERROR: No lights have been configured for usage. To set up lights "
                             "use configure_lights and pass it the type of light (e.g. lifx, phue), "
@@ -529,6 +533,8 @@ class Activation(Lights):
                 continue
 
             response = light_api.run_commands(words)
+            if debug:
+                print(response)
             if voice_response:
                 self._voice_response(response)
 
@@ -543,6 +549,8 @@ class Activation(Lights):
                 speech_responses.add(SPEECH_RESPONSES[command] + " " + noun)
             elif list(result)[0] == "INFO":
                 speech_responses.add(result["INFO"])
+            elif list(result)[0] == "ERROR":
+                speech_responses.add(result["ERROR"])
 
         for res in speech_responses:
             self.vOut.speak(res)
