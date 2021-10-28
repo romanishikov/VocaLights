@@ -61,8 +61,8 @@ voice.configure_lights(VocaLights.LX_BRAND,
                        flicker_rate=(0.01, 0.05))
 ```
 
-Finally, call the run() method and speak a command. The voice_response parameter can be set to True to activate the voice assistant that will take input from the request sent and returned from the LightAPI object and convey it back in the computers voice.
+Finally, call the run() method and speak a command. The voice_response parameter can be set to True to activate the voice assistant that will take input from the request sent and returned from the LightAPI object and convey it back in the computers voice. If the debug parameter is set to True then the responses for each request will be printed onto the console.
 ```python
 voice.run()  # Standard process
-# voice.run(voice_response=True)  # Enable voice assistant to convey completed requests 
+# voice.run(voice_response=True, debug=True)  # Enable voice assistant to convey completed requests and enable console logging
 ```
